@@ -70,6 +70,8 @@ jobs:
       - name: Bundle Qt frameworks
         run: |
           macdeployqt build/PasswordChecker.app
+          # Ad-hoc подпись: без неё Gatekeeper на Apple Silicon считает бандл «повреждённым»
+          codesign --force --deep --sign - build/PasswordChecker.app
           ditto -c -k --keepParent build/PasswordChecker.app PasswordChecker-macos.zip
 
       - uses: actions/upload-artifact@v4
