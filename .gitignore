@@ -1,0 +1,14 @@
+# Сборка
+build/
+cmake-build-*/
+*.o
+*.obj
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.user
+
+# macOS
+.DS_Store

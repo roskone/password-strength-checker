@@ -1,0 +1,81 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    name: Windows (.exe)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.2'
+          arch: win64_msvc2022_64
+          cache: true
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Bundle Qt DLLs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item build/Release/PasswordChecker.exe dist/
+          windeployqt --release --no-translations --no-opengl-sw dist/PasswordChecker.exe
+          Compress-Archive -Path dist/* -DestinationPath PasswordChecker-windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PasswordChecker-windows-x64
+          path: dist/
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: PasswordChecker-windows-x64.zip
+
+  macos:
+    name: macOS (.app)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.2'
+          cache: true
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Bundle Qt frameworks
+        run: |
+          macdeployqt build/PasswordChecker.app
+          ditto -c -k --keepParent build/PasswordChecker.app PasswordChecker-macos.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PasswordChecker-macos
+          path: build/PasswordChecker.app
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: PasswordChecker-macos.zip
